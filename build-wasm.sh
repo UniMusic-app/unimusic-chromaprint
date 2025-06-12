@@ -39,6 +39,7 @@ emcc -O3 \
 
 BUILT_FILES="./chromaprint.js ./chromaprint.wasm ./chromaprint.d.ts"
 cp $BUILT_FILES ../../src
+mkdir ../../dist
 cp $BUILT_FILES ../../dist
 
 popd # build-wasm
