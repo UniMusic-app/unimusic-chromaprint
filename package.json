@@ -1,0 +1,32 @@
+{
+  "name": "@unimusic/chromaprint",
+  "author": "Im-Beast",
+  "license": "MIT",
+  "repository": {
+    "url": "git+https://github.com/unimusic-app/unimusic-chromaprint.git"
+  },
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Library for generating audio fingerprints by using AcoustID's Chromaprint compiled to WASM",
+  "keywords": [
+    "wasm",
+    "acoustid",
+    "chromaprint",
+    "audio",
+    "fingerprint",
+    "audio analysis",
+    "audio fingerprinting"
+  ],
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
