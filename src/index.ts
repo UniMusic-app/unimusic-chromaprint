@@ -1,27 +1,66 @@
+// Loose implementation of https://github.com/acoustid/chromaprint/blob/56002095f2c4d7557b63f37c551f0dc445cf3202/src/cmd/fpcalc.cpp
 import createChromaprintModule from "./chromaprint.js";
 
 const Module = await createChromaprintModule();
 
-// Configuration taken from https://github.com/acoustid/chromaprint/blob/56002095f2c4d7557b63f37c551f0dc445cf3202/src/cmd/fpcalc.cpp#L22
-const config = {
+export enum ChromaprintAlgorithm {
+  Test1 = 0,
+  Test2,
+  Test3,
+  Test4,
+  Test5,
+  Default = ChromaprintAlgorithm.Test2,
+}
+
+interface Config {
+  /**
+   * @default 120
+   */
+  maxDuration: number;
+  /**
+   * @default: 0
+   */
+  chunkDuration: number;
+  /**
+   * @default {ChromaprintAlgorithm.Default}
+   */
+  algorithm: ChromaprintAlgorithm;
+  /**
+   * @default false
+   */
+  rawOutput: boolean;
+  /**
+   * @default false
+   */
+  overlap: boolean;
+}
+
+const defaultConfig: Config = {
   maxDuration: 120,
   chunkDuration: 0,
-  algorithm: 2,
-  outputFormat: "text",
+  algorithm: ChromaprintAlgorithm.Default,
   rawOutput: false,
   overlap: false,
 };
 
-function getFingerprint(ctx: number) {
+function getFingerprint(config: Config, ctx: number) {
   if (config.rawOutput) {
     // Get raw fingerprint
     const sizePtr = Module._malloc(4);
-    Module._chromaprint_get_raw_fingerprint_size(ctx, sizePtr);
+    if (!Module._chromaprint_get_raw_fingerprint_size(ctx, sizePtr)) {
+      throw new Error("Could not get fingerprinting size");
+    }
     const size = Module.HEAP32[sizePtr / 4];
     Module._free(sizePtr);
 
+    if (size <= 0) {
+      throw new Error("Empty fingerprint");
+    }
+
     const dataPtr = Module._malloc(4);
-    Module._chromaprint_get_raw_fingerprint(ctx, dataPtr, sizePtr);
+    if (!Module._chromaprint_get_raw_fingerprint(ctx, dataPtr, sizePtr)) {
+      throw new Error("Could not get the fingerprint");
+    }
     const rawDataPtr = Module.HEAP32[dataPtr / 4];
 
     const rawData = [];
@@ -44,8 +83,13 @@ function getFingerprint(ctx: number) {
   }
 }
 
+/**
+ * Generates fingerprint(s) from given file.\
+ * With default configuration it will yield at most one fingerprint.
+ */
 export async function* processAudioFile(
-  file: ArrayBuffer
+  file: ArrayBuffer,
+  config: Config = defaultConfig
 ): AsyncGenerator<string> {
   try {
     // Decode audio using Web Audio API
@@ -72,7 +116,7 @@ export async function* processAudioFile(
       }
 
       // Process audio data
-      yield* processAudioData(ctx, pcmData, sampleRate, channels);
+      yield* processAudioData(config, ctx, pcmData, sampleRate, channels);
     } finally {
       // Clean up
       Module._chromaprint_free(ctx);
@@ -113,6 +157,7 @@ function convertPcmF32ToI16(audioBuffer: AudioBuffer): Int16Array {
 }
 
 async function* processAudioData(
+  config: Config,
   ctx: number,
   pcmData: Int16Array,
   sampleRate: number,
@@ -160,7 +205,7 @@ async function* processAudioData(
         }
 
         // Get and display result
-        const fingerprint = getFingerprint(ctx);
+        const fingerprint = getFingerprint(config, ctx);
         yield fingerprint;
 
         chunkCount++;
@@ -186,7 +231,7 @@ async function* processAudioData(
         throw new Error("Failed to finish fingerprinting");
       }
 
-      const fingerprint = getFingerprint(ctx);
+      const fingerprint = getFingerprint(config, ctx);
       yield fingerprint;
     }
   } finally {
