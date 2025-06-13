@@ -6,7 +6,7 @@
     "url": "git+https://github.com/unimusic-app/unimusic-chromaprint.git"
   },
   "type": "module",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Library for generating audio fingerprints by using AcoustID's Chromaprint compiled to WASM",
   "keywords": [
     "wasm",
