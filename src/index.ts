@@ -47,38 +47,41 @@ function getFingerprint(config: Config, ctx: number) {
   if (config.rawOutput) {
     // Get raw fingerprint
     const sizePtr = Module._malloc(4);
-    if (!Module._chromaprint_get_raw_fingerprint_size(ctx, sizePtr)) {
-      throw new Error("Could not get fingerprinting size");
-    }
-    const size = Module.HEAP32[sizePtr / 4];
-    Module._free(sizePtr);
-
-    if (size <= 0) {
-      throw new Error("Empty fingerprint");
-    }
-
     const dataPtr = Module._malloc(4);
-    if (!Module._chromaprint_get_raw_fingerprint(ctx, dataPtr, sizePtr)) {
-      throw new Error("Could not get the fingerprint");
-    }
     const rawDataPtr = Module.HEAP32[dataPtr / 4];
+    try {
+      if (!Module._chromaprint_get_raw_fingerprint_size(ctx, sizePtr)) {
+        throw new Error("Could not get fingerprinting size");
+      }
+      const size = Module.HEAP32[sizePtr / 4];
+      if (size <= 0) {
+        throw new Error("Empty fingerprint");
+      }
 
-    const rawData = [];
-    for (let i = 0; i < size; i++) {
-      rawData.push(Module.HEAP32[(rawDataPtr + i * 4) / 4]);
+      if (!Module._chromaprint_get_raw_fingerprint(ctx, dataPtr, sizePtr)) {
+        throw new Error("Could not get raw fingerprint");
+      }
+      const rawData = [];
+      for (let i = 0; i < size; i++) {
+        rawData.push(Module.HEAP32[(rawDataPtr + i * 4) / 4]);
+      }
+
+      return rawData.join(",");
+    } finally {
+      Module._free(sizePtr);
+      Module._free(rawDataPtr);
+      Module._free(dataPtr);
     }
-
-    Module._free(dataPtr);
-    return rawData.join(",");
   } else {
     // Get compressed fingerprint
     const fpPtr = Module._malloc(4);
     if (!Module._chromaprint_get_fingerprint(ctx, fpPtr)) {
       throw new Error("Failed to get fingerprint");
     }
-
-    const fp = Module.UTF8ToString(Module.HEAP32[fpPtr / 4]);
+    const cStrFp = Module.HEAP32[fpPtr / 4];
+    const fp = Module.UTF8ToString(cStrFp);
     Module._free(fpPtr);
+    Module._free(cStrFp);
     return fp;
   }
 }
@@ -95,10 +98,8 @@ export async function* processAudioFile(
     // Decode audio using Web Audio API
     const audioBuffer = await decodeAudioFile(file);
 
-    console.log(audioBuffer.duration);
-
     // Convert to the format expected by Chromaprint (16-bit PCM)
-    const pcmData = convertPcmF32ToI16(audioBuffer);
+    const pcmData = convertPcmF32ToI16(config, audioBuffer);
 
     // Create Chromaprint context
     const ctx = Module._chromaprint_new(1);
@@ -221,8 +222,6 @@ async function* processAudioData(
         if (processedSamples < Math.min(pcmData.length, maxSamples)) {
           if (config.overlap) {
             Module._chromaprint_clear_fingerprint(ctx);
-          } else {
-            Module._chromaprint_start(ctx, sampleRate, channels);
           }
 
           Module._chromaprint_start(ctx, sampleRate, channels);
