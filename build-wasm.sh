@@ -25,12 +25,15 @@ emcmake cmake \
 emmake make VERBOSE=1
 
 emcc -O3 \
+    -flto \
+    -s MALLOC=mimalloc \
     -s MODULARIZE=1 \
     -s ENVIRONMENT="web" \
     -s EXPORT_ES6=1 \
     -s EXPORT_NAME="createChromaprintModule" \
     -s ASSERTIONS=1 \
     -s ALLOW_MEMORY_GROWTH=1 \
+    -s MINIMAL_RUNTIME_STREAMING_WASM_COMPILATION=1 \
     -s EXPORTED_FUNCTIONS='["_chromaprint_new", "_chromaprint_start", "_chromaprint_feed", "_chromaprint_finish", "_chromaprint_get_fingerprint", "_chromaprint_get_raw_fingerprint", "_chromaprint_free", "_chromaprint_get_raw_fingerprint_size", "_chromaprint_get_delay", "_chromaprint_get_delay_ms", "_chromaprint_clear_fingerprint", "_malloc", "_free"]' \
     -s EXPORTED_RUNTIME_METHODS='["cwrap", "ccall", "UTF8ToString", "getValue", "HEAP16", "HEAP32"]' \
     -o chromaprint.js \
