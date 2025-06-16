@@ -224,6 +224,8 @@ async function* processAudioData(
           } else {
             Module._chromaprint_start(ctx, sampleRate, channels);
           }
+
+          Module._chromaprint_start(ctx, sampleRate, channels);
         }
       }
     } else {
