@@ -139,9 +139,16 @@ async function decodeAudioFile(buffer: ArrayBuffer) {
   return await audioContext.decodeAudioData(buffer);
 }
 
-function convertPcmF32ToI16(audioBuffer: AudioBuffer): Int16Array {
+function convertPcmF32ToI16(
+  config: Config,
+  audioBuffer: AudioBuffer
+): Int16Array {
   const numberOfChannels = audioBuffer.numberOfChannels;
-  const length = audioBuffer.length;
+
+  const length = Math.min(
+    audioBuffer.length,
+    config.maxDuration * audioBuffer.sampleRate * audioBuffer.numberOfChannels
+  );
   const pcmData = new Int16Array(length * numberOfChannels);
 
   for (let channel = 0; channel < numberOfChannels; channel++) {
